@@ -1,93 +1,85 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
 
 export default function ChooseRolePage() {
-  const { user, isSignedIn, isLoaded } = useUser();
+  const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
-  const [selectedRole, setSelectedRole] = useState<"buyer" | "seller" | null>(null);
-  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
 
-  const handleAssignRole = async () => {
-    if (!user || !selectedRole) return;
+    const checkRole = async () => {
+      try {
+        const res = await fetch(
+          `http://localhost:8080/api/users/check-role?clerkUserId=${user.id}`
+        );
 
-    setLoading(true);
+        const data = await res.json();
 
+        if (data.hasRole) {
+          // 🚫 If role exists, redirect to appropriate dashboard
+          router.push(`/dashboard/${data.roles[0]}`);
+        } else {
+          setLoading(false); // ✅ Show role selection UI
+        }
+      } catch (err) {
+        console.error("Error checking role:", err);
+      }
+    };
+
+    checkRole();
+  }, [isLoaded, isSignedIn, user, router]);
+
+  if (loading) return <p className="text-center mt-10">Checking role...</p>;
+
+  return (
+    <div className="p-4 text-center">
+      <h1 className="text-2xl font-bold mb-4">Choose your Role</h1>
+      <p className="mb-4">Are you here to buy or sell?</p>
+
+      {/* Simple Buttons — We'll wire them to backend next */}
+      <button
+        onClick={() => handleConfirmRole("buyer")}
+        className="bg-blue-600 text-white px-4 py-2 rounded-md mr-4"
+      >
+        Buyer
+      </button>
+
+      <button 
+        onClick={() => handleConfirmRole("seller")}
+        className="bg-green-600 text-white px-4 py-2 rounded-md cursor-pointer"
+      >
+        Seller
+      </button>
+    </div>
+  );
+
+  async function handleConfirmRole(role: "buyer" | "seller") {
     try {
-      const res = await fetch("https://<YOUR_BACKEND_URL>/api/users/assign-role", {
+      const res = await fetch("http://localhost:8080/api/users/assign-role", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          clerkUserId: user.id,
-          role: selectedRole,
+          clerkUserId: user?.id,
+          role,
         }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message || "Failed to assign role");
-
-      if (selectedRole === "buyer") {
-        router.push("/dashboard/buyer");
-    } 
-    else if (selectedRole === "seller") {
-        router.push("/dashboard/seller");
-}
+      if (res.ok) {
+        router.push(`/dashboard/${role}`);
+      } else {
+        const error = await res.json();
+        console.error("Error assigning role:", error);
+        alert("Failed to assign role.");
+      }
     } catch (err) {
-      console.error("Error assigning role:", err);
-      alert("Something went wrong. Try again.");
-    } finally {
-      setLoading(false);
+      console.error("Failed to assign role:", err);
     }
-  };
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    if (!isSignedIn) router.push("/sign-in");
-  }, [isLoaded, isSignedIn, router]);
-
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6">
-      <h1 className="text-2xl font-bold mb-6">Select Your Role</h1>
-
-      <div className="space-y-4 mb-6">
-        <label className="block">
-          <input
-            type="radio"
-            name="role"
-            value="buyer"
-            checked={selectedRole === "buyer"}
-            onChange={() => setSelectedRole("buyer")}
-            className="mr-2"
-          />
-          Buyer
-        </label>
-
-        <label className="block">
-          <input
-            type="radio"
-            name="role"
-            value="seller"
-            checked={selectedRole === "seller"}
-            onChange={() => setSelectedRole("seller")}
-            className="mr-2"
-          />
-          Seller
-        </label>
-      </div>
-
-      <button
-        onClick={handleAssignRole}
-        disabled={!selectedRole || loading}
-        className="px-6 py-2 bg-black text-white rounded hover:bg-gray-800"
-      >
-        {loading ? "Saving..." : "Confirm Role"}
-      </button>
-    </div>
-  );
+  }
 }
