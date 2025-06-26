@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import auctionRoutes from './routes/auctions';
 import bidRoutes from './routes/bids';
 import webhooks from './routes/webhooks';
+import users from './routes/users';
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use('/api/auctions',auctionRoutes);
 app.use('/api/bids',bidRoutes);
 app.use('/api/webhooks',webhooks);
+app.use('/api/users',users);
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });
