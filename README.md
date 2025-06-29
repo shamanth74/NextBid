@@ -14,7 +14,7 @@ NextBid is a full-stack auction platform where users can list products and other
 
 ---
 
-## ✨ Features
+## ✨ Features -
 
 - User Authentication with Clerk
 - Role assignment: Buyer / Seller
